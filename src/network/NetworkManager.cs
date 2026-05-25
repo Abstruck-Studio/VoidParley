@@ -25,12 +25,22 @@ public partial class NetworkManager : Node
     public override void _Ready()
     {
         _peer = new ENetMultiplayerPeer();
+        // Client
         Multiplayer.ConnectedToServer += OnConnectedToServer;
+        Multiplayer.PeerDisconnected += OnPeerDisconnected_Client;
+        
+        // Server
+        Multiplayer.PeerDisconnected += OnPeerDisconnected_Server;
     }
 
     public override void _ExitTree()
     {
+        // Client
         Multiplayer.ConnectedToServer -= OnConnectedToServer;
+        Multiplayer.PeerDisconnected -= OnPeerDisconnected_Client;
+        
+        // Server
+        Multiplayer.PeerDisconnected -= OnPeerDisconnected_Server;
     }
     
     public bool CreateServer(int port, int maxPlayers)
@@ -78,10 +88,11 @@ public partial class NetworkManager : Node
         if (null != _peer)
         {
             _peer.Close();
+            _peer.Dispose();
             _peer = null;
-            Multiplayer.MultiplayerPeer = null;
         }
         
+        Multiplayer.MultiplayerPeer = null;
         IsConnectedToServer = false;
     }
 
@@ -93,6 +104,19 @@ public partial class NetworkManager : Node
         PlayerData data = new PlayerData(LocalPlayerId, Player.LocalId);
         RpcId(1, MethodName.ReceivePlayerInfoFromClient, JsonSerializer.Serialize(data));
     }
+
+    private void OnPeerDisconnected_Client(long id)
+    {
+        if (Multiplayer.IsServer()) return;
+        PlayerManager.Instance.ClearPlayers();
+    }
+    
+    // === === Server === === 
+    private void OnPeerDisconnected_Server(long id)
+    {
+        if (!Multiplayer.IsServer()) return;
+        PlayerManager.Instance.LeavePlayer(id);
+    }
     
     // <== Rpc ==>
     // === === Server === === 
@@ -100,7 +124,11 @@ public partial class NetworkManager : Node
     public void ReceivePlayerInfoFromClient(string playerInfo)
     {
         PlayerData data = JsonSerializer.Deserialize<PlayerData>(playerInfo);
-        PlayerManager.Instance.JoinPlayer(data);
+        long senderId = Multiplayer.GetRemoteSenderId();
+        if (senderId == data.UniqueId)
+        {
+            PlayerManager.Instance.JoinPlayer(data);
+        }
     }
     
 }

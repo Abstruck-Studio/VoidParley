@@ -34,6 +34,18 @@ public partial class PlayerManager : Node
         _players[player.UniqueId] = player;
         Rpc(MethodName.SendPlayerListToClient, JsonSerializer.Serialize(_players.Values));
     }
+
+    public void LeavePlayer(long uniqueId)
+    {
+        _players.Remove(uniqueId);
+        Rpc(MethodName.SendPlayerListToClient, JsonSerializer.Serialize(_players.Values));
+    }
+
+    // === === Client === ===
+    public void ClearPlayers()
+    {
+        _players.Clear();
+    }
     
     // <== Rpc ==>
     // === === Client === === 

@@ -14,10 +14,8 @@ public partial class Main : Node2D
 
     public override void _Ready()
     {
-        // 设置本地玩家标识（示例：使用设备名+时间戳）
         Player.LocalId = $"{OS.GetName()}_{Time.GetUnixTimeFromSystem()}";
 
-        // 创建 UI 控件
         var container = new VBoxContainer();
         container.Size = new Vector2(400, 300);
         container.Position = new Vector2(50, 50);
@@ -48,12 +46,17 @@ public partial class Main : Node2D
         joinButton.Pressed += OnJoinPressed;
         clientPanel.AddChild(joinButton);
 
+        // 🟢 新增：断开连接按钮
+        var disconnectButton = new Button();
+        disconnectButton.Text = "断开连接";
+        disconnectButton.Pressed += OnDisconnectPressed;
+        container.AddChild(disconnectButton);
+
         // 玩家列表显示
         _playerList = new ItemList();
         _playerList.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         container.AddChild(_playerList);
 
-        // 定时刷新玩家列表（避免频繁修改其他类）
         _refreshTimer = new Timer();
         _refreshTimer.WaitTime = 0.5;
         _refreshTimer.Timeout += RefreshPlayerList;
@@ -86,12 +89,32 @@ public partial class Main : Node2D
             GD.PrintErr("连接失败");
     }
 
+    // 🟢 新增：断开连接处理
+    private void OnDisconnectPressed()
+    {
+        if (!NetworkManager.IsConnectedToServer)
+        {
+            GD.Print("未连接到任何服务器，无需断开");
+            return;
+        }
+        
+        NetworkManager.Instance.Disconnect();
+        PlayerManager.Instance.ClearPlayers();  // 清空本地玩家缓存
+        _playerList.Clear();                    // 立即清空 UI
+        GD.Print("已断开连接");
+    }
+
     private void RefreshPlayerList()
     {
-        // 需要 PlayerManager 提供公共方法： public List<PlayerData> GetPlayers() => _players.Values.ToList();
-        // 同时需在文件顶部添加 using System.Linq;
+        // 如果未连接，PlayerManager 可能为 null，需增加保护
+        if (PlayerManager.Instance == null || !NetworkManager.IsConnectedToServer)
+        {
+            // 可选：清空列表避免显示旧数据
+            if (_playerList.ItemCount > 0) _playerList.Clear();
+            return;
+        }
+
         List<PlayerData> players = PlayerManager.Instance.GetPlayers();
-        
         _playerList.Clear();
         foreach (var p in players)
         {
