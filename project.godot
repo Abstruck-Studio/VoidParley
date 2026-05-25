@@ -11,8 +11,14 @@ config_version=5
 [application]
 
 config/name="Void Parley"
-config/features=PackedStringArray("4.6", "GL Compatibility")
+run/main_scene="uid://dlgk34i5e8gcx"
+config/features=PackedStringArray("4.6", "C#", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[autoload]
+
+PlayerManager="*uid://bks3687afrynm"
+NetworkManager="*uid://bit6rnge0rakn"
 
 [dotnet]
 
